@@ -5446,11 +5446,13 @@ MonoBehaviour:
   m_GameObject: {fileID: 1428861893}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fee6a409e3d09bb4a90c8cfda4942574, type: 3}
+  m_Script: {fileID: 11500000, guid: 130fe693d452df74ea1b7103b7c8c923, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  brushShape: {fileID: 10912, guid: 0000000000000000f000000000000000, type: 0}
-  paintRadius: 5
+  paintBlobPrefab: {fileID: 325312474069240192, guid: d3e010e8de6809e46b91145e8ffe3acb,
+    type: 3}
+  squashSpeed: 20
+  splatRadius: 1.5
 --- !u!1 &1533491435
 GameObject:
   m_ObjectHideFlags: 0
