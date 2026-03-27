@@ -5,9 +5,9 @@ using UnityEngine;
 public class LiquidDeath : MonoBehaviour
 {
     [Header("Настройки")]
-    public GameObject paintBlobPrefab; // Префаб, сплющенный по Z (например, 0.01)
-    public float squashSpeed = 15f;    // Скорость сплющивания игрока
-    [Range(0.5f, 3.0f)] public float splatRadius = 1.5f; // Радиус разлета
+    public GameObject paintBlobPrefab;
+    public float squashSpeed = 15f;
+    [Range(0.5f, 3.0f)] public float splatRadius = 1.5f;
 
     private bool isDead = false;
 
@@ -16,12 +16,10 @@ public class LiquidDeath : MonoBehaviour
         if (isDead || !collision.gameObject.CompareTag("Obstacle")) return;
         isDead = true;
 
-        // 1. Берем цвет игрока прямо сейчас
         Color currentColor = Color.white;
         Renderer playerRend = GetComponentInChildren<Renderer>();
         if (playerRend != null) currentColor = playerRend.material.color;
 
-        // 2. Останавливаем физику
         if (TryGetComponent<Rigidbody>(out Rigidbody rb))
         {
             rb.isKinematic = true;
@@ -30,47 +28,44 @@ public class LiquidDeath : MonoBehaviour
 
         ContactPoint contact = collision.contacts[0];
 
-        // 3. Создаем ПЛОСКУЮ кляксу
+        // Создаем кляксу
         CreateSplat(contact, currentColor);
 
-        // 4. Впечатываем шар
+        // Запускаем расплющивание
         StartCoroutine(SquashAndHide(contact.normal));
 
-        if (LevelManager.Instance != null) LevelManager.Instance.GameOver();
+        // НАХОДИМ КАМЕРУ И ЗАПУСКАЕМ ПРОЛЕТ
+        // Ищем скрипт на главной камере
+        DynamicCamera dynCam = Camera.main.GetComponent<DynamicCamera>();
+        if (dynCam != null)
+        {
+            dynCam.StartDeathSequence(contact.point);
+        }
+        else
+        {
+            // Если скрипт камеры не найден (на всякий случай), вызываем GameOver сразу
+            if (LevelManager.Instance != null) LevelManager.Instance.ShowGameOverUI();
+        }
     }
 
     void CreateSplat(ContactPoint contact, Color color)
     {
-        int pieces = Random.Range(6, 10); // Сколько кусочков
-
-        // Вращение, чтобы ось Z (синяя) смотрела ОТ стены
+        int pieces = Random.Range(6, 10);
         Quaternion rotation = Quaternion.LookRotation(contact.normal);
-
-        // ГЛАВНОЕ: Узнаем, какой масштаб по Z в префабе (например, 0.01)
         float flatZ = paintBlobPrefab.transform.localScale.z;
 
         for (int i = 0; i < pieces; i++)
         {
-            // Случайная точка в круге
             Vector2 randomPoint = Random.insideUnitCircle * splatRadius;
             Vector3 offset = rotation * new Vector3(randomPoint.x, randomPoint.y, 0);
-
-            // Точка спавна чуть-чуть перед стеной (0.01f), чтобы не было мерцания
             Vector3 spawnPos = contact.point + contact.normal * 0.01f + offset;
 
             GameObject blob = Instantiate(paintBlobPrefab, spawnPos, rotation);
 
-            // ХАОС ФОРМЫ (КРУГИ):
-            // Случайный размер по X и Y, а Z оставляем "плоским" из префаба
             float s = Random.Range(0.4f, 1.2f);
-
-            // ИСПРАВЛЕННАЯ СТРОЧКА: Применяем плоский Z из префаба
             blob.transform.localScale = new Vector3(s, s, flatZ);
-
-            // Случайный поворот "блина" по кругу
             blob.transform.Rotate(Vector3.forward, Random.Range(0, 360));
 
-            // ПОКРАСКА
             Renderer rend = blob.GetComponentInChildren<Renderer>();
             if (rend != null) rend.material.color = color;
 
@@ -86,12 +81,10 @@ public class LiquidDeath : MonoBehaviour
         while (t < 1f)
         {
             t += Time.deltaTime * squashSpeed;
-            // Делаем шар ОЧЕНЬ широким при ударе (эффект лепешки)
             transform.localScale = Vector3.Lerp(startScale, new Vector3(1.8f, 1.8f, 0.001f), t);
             yield return null;
         }
 
-        // Прячем игрока
         foreach (var rend in GetComponentsInChildren<Renderer>()) rend.enabled = false;
         if (GetComponent<Collider>()) GetComponent<Collider>().enabled = false;
     }

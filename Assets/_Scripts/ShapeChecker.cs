@@ -18,7 +18,7 @@ public class ShapeChecker : MonoBehaviour
                 Debug.Log("Форма не совпадает! Требовалось: " + requiredTag);
                 if (LevelManager.Instance != null)
                 {
-                    LevelManager.Instance.GameOver();
+                    LevelManager.Instance.ShowGameOverUI();
                 }
             }
         }

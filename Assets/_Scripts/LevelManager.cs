@@ -106,7 +106,7 @@ public class LevelManager : MonoBehaviour
         distanceTravelled = playerTransform.position.z;
         UpdatePhases();
 
-        if (playerTransform.position.y < -5f) GameOver();
+        if (playerTransform.position.y < -5f) ShowGameOverUI();
     }
 
     public void UpdateMenuUI()
@@ -206,13 +206,20 @@ public class LevelManager : MonoBehaviour
         if (winUI) winUI.SetActive(true);
     }
 
-    public void GameOver()
+    public void HandlePlayerDeath()
     {
         if (!isGameStarted) return;
         isGameStarted = false;
-
+        
+        Time.timeScale = 0.7f;
         SaveCoinsToMemory();
-        Time.timeScale = 0.5f;
+    }
+
+    // 2. Этот метод вызовет КАМЕРА, когда долетит обратно
+    public void ShowGameOverUI()
+    {
+        // Возвращаем нормальное время для работы UI анимаций
+        Time.timeScale = 1f;
         if (loseUI) loseUI.SetActive(true);
     }
 
