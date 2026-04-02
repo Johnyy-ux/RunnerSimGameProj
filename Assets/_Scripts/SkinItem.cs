@@ -7,6 +7,5 @@ public class SkinItem : ScriptableObject
 {
     public string skinName;
     public int price;
-    public Material skinMaterial; // Цвет или текстура скина
-    public bool isUnlocked;       // Куплен ли он?
+    public Material skinMaterial;
 }

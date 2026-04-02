@@ -5,33 +5,18 @@ using UnityEngine;
 public class InventoryManager : MonoBehaviour
 {
     public static InventoryManager Instance;
-    public List<SkinItem> allSkins; // Закинь сюда все свои файлы скинов в инспекторе
+    public List<SkinItem> allSkins;
 
     [Header("UI")]
-    public GameObject skinButtonPrefab; // Префаб нашей кнопки
-    public Transform container;         // Ссылка на Skins_Container
+    public GameObject skinButtonPrefab;
+    public Transform container;
 
     void Awake() => Instance = this;
 
-    void Start()
-    {
-        // При старте загружаем состояние: куплен скин или нет
-        foreach (var skin in allSkins)
-        {
-            // По умолчанию первый скин (индекс 0) всегда куплен
-            if (allSkins.IndexOf(skin) == 0) skin.isUnlocked = true;
-            else
-            {
-                // Проверяем сохранение по имени скина (1 = куплен, 0 = нет)
-                skin.isUnlocked = PlayerPrefs.GetInt("Skin_" + skin.name, 0) == 1;
-            }
-        }
-        SpawnButtons();
-    }
+    void Start() => SpawnButtons();
 
-    void SpawnButtons()
+    public void SpawnButtons()
     {
-        // Очищаем контейнер на всякий случай
         foreach (Transform child in container) Destroy(child.gameObject);
 
         foreach (var skin in allSkins)
@@ -41,38 +26,56 @@ public class InventoryManager : MonoBehaviour
         }
     }
 
+    public bool IsSkinUnlocked(SkinItem skin)
+    {
+        // Первый скин всегда открыт
+        if (allSkins.IndexOf(skin) == 0) return true;
+        return PlayerPrefs.GetInt("Skin_" + skin.name, 0) == 1;
+    }
+
+    public bool TryBuySkin(SkinItem skin)
+    {
+        int currentCoins = PlayerPrefs.GetInt("TotalCoins", 0);
+
+        if (currentCoins >= skin.price && !IsSkinUnlocked(skin))
+        {
+            currentCoins -= skin.price;
+            PlayerPrefs.SetInt("TotalCoins", currentCoins);
+            PlayerPrefs.SetInt("Skin_" + skin.name, 1);
+            PlayerPrefs.Save();
+
+            LevelManager.Instance.UpdateMenuCoinDisplay();
+            return true;
+        }
+        return false;
+    }
+
     public Material GetSavedSkinMaterial()
     {
         // Достаем индекс выбранного скина (по умолчанию 0)
         int selectedIndex = PlayerPrefs.GetInt("SelectedSkinIndex", 0);
 
-        // Проверяем, что индекс не вылетает за пределы списка
-        if (selectedIndex >= 0 && selectedIndex < allSkins.Count)
+        // Проверяем, что индекс в пределах списка и список не пуст
+        if (allSkins != null && allSkins.Count > 0)
         {
-            return allSkins[selectedIndex].skinMaterial;
+            if (selectedIndex >= 0 && selectedIndex < allSkins.Count)
+            {
+                return allSkins[selectedIndex].skinMaterial;
+            }
+            return allSkins[0].skinMaterial; // Если индекс кривой, даем первый скин
         }
-        return allSkins[0].skinMaterial; // Если что-то не так, даем стандартный
+
+        Debug.LogError("Список allSkins пуст в InventoryManager!");
+        return null;
     }
 
-    public void BuySkin(SkinItem skin)
+    public void SelectSkin(SkinItem skin)
     {
-        int currentCoins = PlayerPrefs.GetInt("TotalCoins", 0);
+        int index = allSkins.IndexOf(skin);
+        PlayerPrefs.SetInt("SelectedSkinIndex", index);
+        PlayerPrefs.Save();
 
-        if (currentCoins >= skin.price && !skin.isUnlocked)
-        {
-            currentCoins -= skin.price;
-            PlayerPrefs.SetInt("TotalCoins", currentCoins);
-
-            skin.isUnlocked = true;
-            PlayerPrefs.SetInt("Skin_" + skin.name, 1);
-            PlayerPrefs.Save();
-
-            LevelManager.Instance.UpdateMenuCoinDisplay();
-            Debug.Log("Куплен скин: " + skin.skinName);
-        }
-        else
-        {
-            Debug.Log("Недостаточно монет или уже куплено!");
-        }
+        PlayerController player = FindFirstObjectByType<PlayerController>();
+        if (player != null) player.ApplySkin(skin.skinMaterial);
     }
 }
