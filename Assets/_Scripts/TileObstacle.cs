@@ -4,49 +4,31 @@ using UnityEngine;
 
 public class TileObstacle : MonoBehaviour
 {
-    [System.Serializable]
-    public struct BiomePool
-    {
-        public EnvironmentType type;
-        public List<GameObject> standardObstacles;
-        public List<GameObject> shapeObstacles;
-    }
-
-    public List<BiomePool> biomes;
-    public GameObject weakWallPrefab;
+    public List<GameObject> standardObstacles;
+    public List<GameObject> shapeWalls;
     public GameObject coinPrefab;
     public Transform[] spawnPoints;
-
-    private List<GameObject> currentStandardPool;
-    private List<GameObject> currentShapePool;
 
     void Start()
     {
         if (LevelManager.Instance == null) return;
 
-        // ГЛАВНАЯ ФИШКА: 
-        // Создаем уникальный Seed, который зависит от Номера Уровня И Позиции плитки.
-        // Благодаря этому плитка на 100-м метре 1-го уровня ВСЕГДА будет одинаковой.
-        int seed = LevelManager.Instance.currentLevel * 1000 + (int)transform.position.z;
-        Random.InitState(seed);
+        Random.InitState((int)transform.position.z);
 
-        SelectPoolByBiome();
-        GenerateByPhase(LevelManager.Instance.currentPhase);
-    }
+        // Определяем фазу плитки на основе её собственного Z, а не позиции игрока
+        GamePhase myPhase;
+        float z = transform.position.z;
 
-    private void SelectPoolByBiome()
-    {
-        EnvironmentType currentType = LevelManager.Instance.GetCurrentLocation();
+        if (z < 100f) myPhase = GamePhase.Tutorial;
+        else
+        {
+            float cyclePos = (z - 100f) % 500f;
+            if (cyclePos < 200f) myPhase = GamePhase.Standard;
+            else if (cyclePos < 400f) myPhase = GamePhase.ShapeChallenge;
+            else myPhase = GamePhase.Rest;
+        }
 
-        // Ищем нужный пул в списке биомов
-        BiomePool selected = biomes.Find(b => b.type == currentType);
-
-        // Если нашли — берем, если нет — берем первый попавшийся (защита от пустых списков)
-        currentStandardPool = (selected.standardObstacles != null && selected.standardObstacles.Count > 0)
-            ? selected.standardObstacles : biomes[0].standardObstacles;
-
-        currentShapePool = (selected.shapeObstacles != null && selected.shapeObstacles.Count > 0)
-            ? selected.shapeObstacles : biomes[0].shapeObstacles;
+        GenerateByPhase(myPhase);
     }
 
     private void GenerateByPhase(GamePhase phase)
@@ -56,54 +38,56 @@ public class TileObstacle : MonoBehaviour
         switch (phase)
         {
             case GamePhase.Tutorial:
-                Spawn(safeLane, coinPrefab);
+                // В туториале только монетки в центре
+                if (Random.value > 0.5f) Spawn(1, coinPrefab);
                 break;
+
             case GamePhase.Rest:
-                if (Random.value > 0.7f) Spawn(safeLane, coinPrefab);
+                // В фазе отдыха много монет и нет преград
+                Spawn(safeLane, coinPrefab);
+                if (Random.value > 0.7f) Spawn((safeLane + 1) % 3, coinPrefab);
                 break;
+
             case GamePhase.ShapeChallenge:
-                bool wantWeakWall = (LevelManager.Instance.currentLevel > 2 && Random.value > 0.6f);
-                SpawnChallenge(safeLane, !wantWeakWall);
+                // Только стены с отверстиями
+                SpawnShapeChallenge(safeLane);
                 break;
+
             case GamePhase.Standard:
+                // Обычный геймплей с блоками
                 SpawnStandardLayout(safeLane);
                 break;
         }
     }
 
-    private void SpawnChallenge(int mainLane, bool isShapeWall)
+    private void SpawnShapeChallenge(int mainLane)
     {
-        GameObject challengePrefab = isShapeWall ?
-            currentShapePool[Random.Range(0, currentShapePool.Count)] : weakWallPrefab;
-
-        Spawn(mainLane, challengePrefab);
-
+        if (shapeWalls.Count > 0)
+        {
+            Spawn(mainLane, shapeWalls[Random.Range(0, shapeWalls.Count)]);
+        }
+        // Перекрываем остальные пути обычными блоками
         for (int i = 0; i < 3; i++)
         {
-            if (i != mainLane && currentStandardPool.Count > 0)
-            {
-                Spawn(i, currentStandardPool[0]);
-            }
+            if (i != mainLane && standardObstacles.Count > 0)
+                Spawn(i, standardObstacles[0]);
         }
     }
 
     private void SpawnStandardLayout(int safeLane)
     {
-        // Теперь сложность можно привязать к номеру уровня напрямую
-        float obstacleChance = Mathf.Clamp(0.4f + (LevelManager.Instance.currentLevel * 0.02f), 0.4f, 0.85f);
+        // Прогрессивная сложность от дистанции
+        float chance = Mathf.Clamp(0.4f + (transform.position.z / 4000f), 0.4f, 0.8f);
 
         for (int i = 0; i < 3; i++)
         {
             if (i == safeLane)
             {
-                if (Random.value > 0.5f) Spawn(i, coinPrefab);
+                if (Random.value > 0.8f) Spawn(i, coinPrefab);
             }
-            else
+            else if (Random.value < chance && standardObstacles.Count > 0)
             {
-                if (Random.value < obstacleChance)
-                {
-                    Spawn(i, currentStandardPool[Random.Range(0, currentStandardPool.Count)]);
-                }
+                Spawn(i, standardObstacles[Random.Range(0, standardObstacles.Count)]);
             }
         }
     }

@@ -44,7 +44,7 @@ public class InventoryManager : MonoBehaviour
             PlayerPrefs.SetInt("Skin_" + skin.name, 1);
             PlayerPrefs.Save();
 
-            LevelManager.Instance.UpdateMenuCoinDisplay();
+            LevelManager.Instance.UpdateCoinDisplay();
             return true;
         }
         return false;

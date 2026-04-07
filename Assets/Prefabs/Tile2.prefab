@@ -176,15 +176,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bcdc746d813d5f243a9662f048585597, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  biomes:
-  - type: 0
-    standardObstacles:
-    - {fileID: 604955060390432610, guid: d56362a9b2b7b3a4da1b958dac6d2f73, type: 3}
-    shapeObstacles:
-    - {fileID: 6780686736244706083, guid: 3c018aa1326a3ec478de9a82c5bb9e53, type: 3}
-    - {fileID: 2802177635500280559, guid: 56d7cbeb5dd00d24c844fb49b6bc30c2, type: 3}
-  weakWallPrefab: {fileID: 2495785245206752900, guid: d77c47175367afd48a7126be15f4763c,
-    type: 3}
+  standardObstacles:
+  - {fileID: 604955060390432610, guid: d56362a9b2b7b3a4da1b958dac6d2f73, type: 3}
+  shapeWalls:
+  - {fileID: 6264465867545240928, guid: 3c018aa1326a3ec478de9a82c5bb9e53, type: 3}
+  - {fileID: 2802177635500280559, guid: 56d7cbeb5dd00d24c844fb49b6bc30c2, type: 3}
   coinPrefab: {fileID: 1199727666660922734, guid: 6955db8903c8c4348a3f4fa80a32c6ce,
     type: 3}
   spawnPoints:

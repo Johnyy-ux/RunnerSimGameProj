@@ -9,256 +9,122 @@ public class LevelManager : MonoBehaviour
 {
     public static LevelManager Instance;
 
-    [Header("Level Configuration")]
-    public LevelData[] levels;
-    private LevelData currentData;
+    [Header("Phase Settings")]
+    public GamePhase currentPhase = GamePhase.Tutorial;
+    public float phaseDistance = 200f; // Длина каждой фазы в метрах
 
-    [Header("Live Progress")]
-    public int currentLevel = 1;
-    public float levelDistance; // Теперь это значение будет перезаписано
-    public float distanceTravelled;
+    [Header("Status")]
     public bool isGameStarted = false;
-    public GamePhase currentPhase = GamePhase.Standard;
+    public float distanceTravelled;
 
     [Header("UI Panels")]
-    public GameObject winUI;
-    public GameObject loseUI;
     public GameObject mainMenuPanel;
     public GameObject gameHUDPanel;
-    public GameObject levelSelectPanel;
+    public GameObject loseUI;
 
     [Header("UI Text")]
-    public TextMeshProUGUI menuCoinText;
-    public TextMeshProUGUI gameCoinText;
-    public TextMeshProUGUI LevelDisplayText;
+    public TextMeshProUGUI scoreText;
+    public TextMeshProUGUI coinText;
+    public TextMeshProUGUI phaseText; // Чтобы игрок видел, что режим сменился
 
-    [Header("References")]
     public Transform playerTransform;
+    private int sessionCoins = 0;
 
-    private int coinsCollectedInRun = 0;
-    private static bool shouldAutoStart = false;
-
-    void Awake()
-    {
-        if (Instance == null) Instance = this;
-        else { Destroy(gameObject); return; }
-
-        // ТЕСТОВЫЙ СБРОС: Раскомментируй строку ниже ОДИН РАЗ, запусти игру, и закомментируй обратно.
-        // PlayerPrefs.DeleteAll(); 
-
-        currentLevel = PlayerPrefs.GetInt("CurrentLevel", 1);
-
-        // ПРОВЕРКА НА ОВЕРФЛОУ: Если уровни кончились, играем последний доступный
-        if (currentLevel > levels.Length)
-        {
-            Debug.Log("Все уровни пройдены! Зацикливаем на последнем.");
-            currentLevel = levels.Length;
-        }
-
-        LoadLevelSettings();
-    }
-
-    void LoadLevelSettings()
-    {
-        if (levels == null || levels.Length == 0)
-        {
-            Debug.LogError("Список уровней пуст в LevelManager!");
-            return;
-        }
-
-        // Берем данные файла (уровень 1 — это индекс 0)
-        int index = Mathf.Clamp(currentLevel - 1, 0, levels.Length - 1);
-        currentData = levels[index];
-
-        // ГЛАВНОЕ: перезаписываем дистанцию из ScriptableObject
-        levelDistance = currentData.distanceToFinish;
-
-        Debug.Log($"Загружен уровень {currentLevel}. Дистанция: {levelDistance}м.");
-    }
+    void Awake() => Instance = this;
 
     void Start()
     {
-        // Всегда сбрасываем время при старте сцены
         Time.timeScale = 1f;
-
-        UpdateMenuUI();
-
-        UpdateMenuCoinDisplay();
-        if (LevelDisplayText) LevelDisplayText.text = "Level " + currentLevel;
-        gameCoinText.text = "0";
-
-        if (shouldAutoStart)
-        {
-            shouldAutoStart = false;
-            StartGame();
-        }
-        else
-        {
-            mainMenuPanel.SetActive(true);
-            gameHUDPanel.SetActive(false);
-        }
+        UpdateCoinDisplay();
+        mainMenuPanel.SetActive(true);
+        gameHUDPanel.SetActive(false);
     }
 
     void Update()
     {
-        if (playerTransform == null || !isGameStarted) return;
+        if (!isGameStarted || playerTransform == null) return;
 
         distanceTravelled = playerTransform.position.z;
-        UpdatePhases();
+        scoreText.text = ((int)distanceTravelled).ToString() + "m";
 
-        if (playerTransform.position.y < -5f) ShowGameOverUI();
+        UpdatePhaseLogic();
+
+        if (playerTransform.position.y < -5f) ShowGameOver();
     }
 
-    public void UpdateMenuUI()
+    // ПРОДВИНУТАЯ ЛОГИКА ФАЗ
+    private void UpdatePhaseLogic()
     {
-        // Показываем текущий уровень в главном меню
-        if (LevelDisplayText != null)
+        if (distanceTravelled < 100f)
         {
-            LevelDisplayText.text = "LEVEL " + currentLevel;
+            currentPhase = GamePhase.Tutorial;
         }
-
-        // Показываем уровень в игровом HUD (если есть)
-        if (LevelDisplayText != null)
+        else
         {
-            LevelDisplayText.text = "Level " + currentLevel;
-        }
+            // Берем остаток от деления всей дистанции на общую длину цикла фаз
+            // Например, цикл: Standard(200) + Shape(200) + Rest(100) = 500м.
+            float cyclePos = (distanceTravelled - 100f) % 500f;
 
-        UpdateMenuCoinDisplay();
+            if (cyclePos < 200f) SetPhase(GamePhase.Standard);
+            else if (cyclePos < 400f) SetPhase(GamePhase.ShapeChallenge);
+            else SetPhase(GamePhase.Rest);
+        }
     }
 
-    // --- ЛОГИКА КНОПОК ---
+    private void SetPhase(GamePhase newPhase)
+    {
+        if (currentPhase == newPhase) return;
+        currentPhase = newPhase;
+
+        // Визуальное оповещение о смене фазы (по желанию)
+        if (phaseText) phaseText.text = currentPhase.ToString();
+        Debug.Log("Смена фазы на: " + currentPhase);
+    }
 
     public void StartGame()
     {
         isGameStarted = true;
         mainMenuPanel.SetActive(false);
         gameHUDPanel.SetActive(true);
-        Time.timeScale = 1f;
-    }
-
-    public void OpenLevelSelect()
-    {
-        if (levelSelectPanel != null)
-        {
-            levelSelectPanel.SetActive(true);
-            mainMenuPanel.SetActive(false); // Прячем главное меню, чтобы не мешало
-        }
-    }
-
-    // Метод для кнопки "Back" или "Close" внутри панели уровней
-    public void CloseLevelSelect()
-    {
-        if (levelSelectPanel != null)
-        {
-            levelSelectPanel.SetActive(false);
-            mainMenuPanel.SetActive(true); // Возвращаем главное меню
-        }
-    }
-
-    public void SelectLevel(int levelIndex)
-    {
-        currentLevel = levelIndex;
-        PlayerPrefs.SetInt("CurrentLevel", currentLevel);
-        PlayerPrefs.Save();
-
-        Time.timeScale = 1f;
-
-        // ГЛАВНОЕ ИЗМЕНЕНИЕ: Ставим false, чтобы игра просто загрузилась в меню
-        shouldAutoStart = false;
-
-        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
-    }
-
-    public void RestartLevel()
-    {
-        shouldAutoStart = true;
-        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
-    }
-
-    public void NextLevel()
-    {
-        // Мы уже прибавили уровень в WinLevel(), просто перезагружаем
-        shouldAutoStart = true;
-        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 
     public void GoToMenu()
     {
-        shouldAutoStart = false;
+        // Если мы в проигрыше, сохраняем данные и идем в меню
+        if (isGameStarted) SaveData();
+
+        // Перезагрузка сцены вернет нас в Start(), где включится панель меню
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 
-    // --- СОСТОЯНИЯ ИГРЫ ---
-
-    public void WinLevel()
+    public void ShowGameOver()
     {
-        if (!isGameStarted) return;
         isGameStarted = false;
-
-        SaveCoinsToMemory();
-
-        // Повышаем уровень и сохраняем
-        currentLevel++;
-        PlayerPrefs.SetInt("CurrentLevel", currentLevel);
-        PlayerPrefs.Save();
-
-        Time.timeScale = 0.5f; // Замедление для эффекта
-        if (winUI) winUI.SetActive(true);
-    }
-
-    public void HandlePlayerDeath()
-    {
-        if (!isGameStarted) return;
-        isGameStarted = false;
-        
-        Time.timeScale = 0.7f;
-        SaveCoinsToMemory();
-    }
-
-    // 2. Этот метод вызовет КАМЕРА, когда долетит обратно
-    public void ShowGameOverUI()
-    {
-        // Возвращаем нормальное время для работы UI анимаций
-        Time.timeScale = 1f;
+        SaveData();
         if (loseUI) loseUI.SetActive(true);
     }
 
-    // --- ВСПОМОГАТЕЛЬНОЕ ---
-
-    public EnvironmentType GetCurrentLocation()
+    private void SaveData()
     {
-        return currentData != null ? currentData.locationType : EnvironmentType.Forest;
-    }
+        int total = PlayerPrefs.GetInt("TotalCoins", 0);
+        PlayerPrefs.SetInt("TotalCoins", total + sessionCoins);
 
-    private void UpdatePhases()
-    {
-        float progress = distanceTravelled / levelDistance;
-        if (progress < 0.1f) currentPhase = GamePhase.Tutorial;
-        else if (progress > 0.9f) currentPhase = GamePhase.Rest;
-        else
-        {
-            currentPhase = ((int)(distanceTravelled / 100) % 2 == 0) ?
-                GamePhase.Standard : GamePhase.ShapeChallenge;
-        }
+        float high = PlayerPrefs.GetFloat("HighScore", 0);
+        if (distanceTravelled > high) PlayerPrefs.SetFloat("HighScore", distanceTravelled);
+
+        PlayerPrefs.Save();
     }
 
     public void AddCoin()
     {
-        coinsCollectedInRun++;
-        gameCoinText.text = coinsCollectedInRun.ToString();
+        sessionCoins++;
+        coinText.text = sessionCoins.ToString();
     }
 
-    public void SaveCoinsToMemory()
+    public void UpdateCoinDisplay()
     {
-        int savedTotal = PlayerPrefs.GetInt("TotalCoins", 0);
-        PlayerPrefs.SetInt("TotalCoins", savedTotal + coinsCollectedInRun);
-        PlayerPrefs.Save();
-        coinsCollectedInRun = 0;
+        // Общий баланс монет
     }
 
-    public void UpdateMenuCoinDisplay()
-    {
-        int total = PlayerPrefs.GetInt("TotalCoins", 0);
-        if (menuCoinText != null) menuCoinText.text = total.ToString();
-    }
+    public void Restart() => UnityEngine.SceneManagement.SceneManager.LoadScene(0);
 }

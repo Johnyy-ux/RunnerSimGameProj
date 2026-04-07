@@ -44,7 +44,7 @@ public class LiquidDeath : MonoBehaviour
         else
         {
             // Если скрипт камеры не найден (на всякий случай), вызываем GameOver сразу
-            if (LevelManager.Instance != null) LevelManager.Instance.ShowGameOverUI();
+            if (LevelManager.Instance != null) LevelManager.Instance.ShowGameOver();
         }
     }
 

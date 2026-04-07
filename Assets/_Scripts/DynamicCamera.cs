@@ -94,7 +94,7 @@ public class DynamicCamera : MonoBehaviour
         // 3. ФИНАЛ: Камера прилетела, теперь показываем UI
         if (LevelManager.Instance != null)
         {
-            LevelManager.Instance.ShowGameOverUI();
+            LevelManager.Instance.ShowGameOver();
         }
     }
 }

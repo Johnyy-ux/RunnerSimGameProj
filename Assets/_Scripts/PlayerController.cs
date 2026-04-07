@@ -246,7 +246,7 @@ public class PlayerController : MonoBehaviour
                 return;
             }
 
-            LevelManager.Instance.ShowGameOverUI();
+            LevelManager.Instance.ShowGameOver();
         }
     }
 
