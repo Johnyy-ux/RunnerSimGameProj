@@ -4,12 +4,18 @@ using UnityEngine;
 
 public class TileManager : MonoBehaviour
 {
-    public GameObject[] tilePrefabs;
-    public Transform playerTransform;
+    [Header("Tile Pools")]
+    public GameObject[] proceduralTiles; // Плитки со скриптом TileObstacle
+    public GameObject[] challengeTiles;  // Заранее собранные сложные плитки
 
+    [Header("Settings")]
+    public Transform playerTransform;
     public float tileLength = 10f;
     public int numberOfTiles = 6;
-    public int backBuffer = 2; // Сколько плиток оставляем за спиной
+    public int backBuffer = 2;
+
+    [Range(0, 1)]
+    public float challengeChance = 0.15f; // Шанс появления ручного челленджа
 
     private float spawnZ = 0f;
     private List<GameObject> activeTiles = new List<GameObject>();
@@ -18,11 +24,10 @@ public class TileManager : MonoBehaviour
     {
         if (playerTransform == null) playerTransform = GameObject.FindGameObjectWithTag("Player").transform;
 
-        // Начальный спавн: создаем цепочку плиток
         for (int i = 0; i < numberOfTiles; i++)
         {
-            // Первая плитка (i=0) всегда пустая (индекс 0)
-            SpawnTile(i == 0 ? 0 : Random.Range(0, tilePrefabs.Length));
+            // Первые 3 плитки всегда пустые (продукт из proceduralTiles[0] или просто пустые)
+            SpawnTile(i < 3);
         }
     }
 
@@ -30,13 +35,9 @@ public class TileManager : MonoBehaviour
     {
         if (playerTransform == null) return;
 
-        // Логика спавна: если игрок проехал достаточно, ставим новую плитку
-        // Используем старую добрую проверку через spawnZ
         if (playerTransform.position.z > spawnZ - (numberOfTiles * tileLength))
         {
-            SpawnTile(Random.Range(0, tilePrefabs.Length));
-
-            // Удаляем только если плиток стало больше, чем (видимые + буфер сзади)
+            SpawnTile(false);
             if (activeTiles.Count > numberOfTiles + backBuffer)
             {
                 DeleteTile();
@@ -44,9 +45,28 @@ public class TileManager : MonoBehaviour
         }
     }
 
-    public void SpawnTile(int tileIndex)
+    public void SpawnTile(bool forceEmpty)
     {
-        GameObject go = Instantiate(tilePrefabs[tileIndex], Vector3.forward * spawnZ, Quaternion.identity, transform);
+        GameObject prefab;
+
+        if (forceEmpty)
+        {
+            prefab = proceduralTiles[0]; // Предполагаем, что индекс 0 — пустая плитка
+        }
+        else
+        {
+            // Выбираем между рандомом и челленджем
+            if (Random.value < challengeChance && challengeTiles.Length > 0)
+            {
+                prefab = challengeTiles[Random.Range(0, challengeTiles.Length)];
+            }
+            else
+            {
+                prefab = proceduralTiles[Random.Range(0, proceduralTiles.Length)];
+            }
+        }
+
+        GameObject go = Instantiate(prefab, Vector3.forward * spawnZ, Quaternion.identity, transform);
         activeTiles.Add(go);
         spawnZ += tileLength;
     }

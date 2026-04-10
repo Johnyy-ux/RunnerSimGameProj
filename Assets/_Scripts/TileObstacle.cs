@@ -4,10 +4,14 @@ using UnityEngine;
 
 public class TileObstacle : MonoBehaviour
 {
-    public List<GameObject> standardObstacles;
-    public List<GameObject> shapeWalls;
+    [Header("Obstacle Prefabs")]
+    public List<GameObject> standardObstacles; // Обычные блоки
+    public GameObject lowObstaclePrefab;      // Преграда для прыжка
+    public List<GameObject> sphereWalls; // Сюда кидаешь все вариации ворот для шара
+    public List<GameObject> cubeWalls;   // Сюда — для куба
     public GameObject coinPrefab;
-    public Transform[] spawnPoints;
+
+    public Transform[] spawnPoints; // 3 точки спавна
 
     void Start()
     {
@@ -15,81 +19,114 @@ public class TileObstacle : MonoBehaviour
 
         Random.InitState((int)transform.position.z);
 
-        // Определяем фазу плитки на основе её собственного Z, а не позиции игрока
-        GamePhase myPhase;
         float z = transform.position.z;
+        GamePhase myPhase = DeterminePhase(z);
 
-        if (z < 100f) myPhase = GamePhase.Tutorial;
+        // Интегрируем "Остывание": каждая 6-я плитка — фаза отдыха
+        if ((int)(z / 10) % 6 == 0)
+        {
+            GenerateRest();
+        }
         else
         {
-            float cyclePos = (z - 100f) % 500f;
-            if (cyclePos < 200f) myPhase = GamePhase.Standard;
-            else if (cyclePos < 400f) myPhase = GamePhase.ShapeChallenge;
-            else myPhase = GamePhase.Rest;
+            GenerateByPhase(myPhase);
         }
+    }
 
-        GenerateByPhase(myPhase);
+    private GamePhase DeterminePhase(float z)
+    {
+        if (z < 100f) return GamePhase.Tutorial;
+        float cyclePos = (z - 100f) % 500f;
+        if (cyclePos < 200f) return GamePhase.Standard;
+        if (cyclePos < 400f) return GamePhase.ShapeChallenge;
+        return GamePhase.Rest;
     }
 
     private void GenerateByPhase(GamePhase phase)
     {
-        int safeLane = Random.Range(0, 3);
-
         switch (phase)
         {
             case GamePhase.Tutorial:
-                // В туториале только монетки в центре
-                if (Random.value > 0.5f) Spawn(1, coinPrefab);
+                Spawn(1, coinPrefab);
                 break;
 
             case GamePhase.Rest:
-                // В фазе отдыха много монет и нет преград
-                Spawn(safeLane, coinPrefab);
-                if (Random.value > 0.7f) Spawn((safeLane + 1) % 3, coinPrefab);
+                GenerateRest();
                 break;
 
             case GamePhase.ShapeChallenge:
-                // Только стены с отверстиями
-                SpawnShapeChallenge(safeLane);
+                SpawnShapePattern();
                 break;
 
             case GamePhase.Standard:
-                // Обычный геймплей с блоками
-                SpawnStandardLayout(safeLane);
+                SpawnRandomPattern();
                 break;
         }
     }
 
-    private void SpawnShapeChallenge(int mainLane)
+    // --- ПАТТЕРНЫ ГЕНЕРАЦИИ ---
+
+    private void SpawnRandomPattern()
     {
-        if (shapeWalls.Count > 0)
-        {
-            Spawn(mainLane, shapeWalls[Random.Range(0, shapeWalls.Count)]);
-        }
-        // Перекрываем остальные пути обычными блоками
+        int rand = Random.Range(0, 3);
+        if (rand == 0) SpawnJumpPattern();
+        else SpawnStandardLayout();
+    }
+
+    private void SpawnStandardLayout()
+    {
+        int safeLane = Random.Range(0, 3);
+        float chance = Mathf.Clamp(0.4f + (transform.position.z / 5000f), 0.4f, 0.8f);
+
         for (int i = 0; i < 3; i++)
         {
-            if (i != mainLane && standardObstacles.Count > 0)
-                Spawn(i, standardObstacles[0]);
+            if (i == safeLane) Spawn(i, coinPrefab);
+            else if (Random.value < chance) Spawn(i, standardObstacles[Random.Range(0, standardObstacles.Count)]);
         }
     }
 
-    private void SpawnStandardLayout(int safeLane)
+    private void SpawnJumpPattern()
     {
-        // Прогрессивная сложность от дистанции
-        float chance = Mathf.Clamp(0.4f + (transform.position.z / 4000f), 0.4f, 0.8f);
+        int jumpLane = Random.Range(0, 3);
+        Spawn(jumpLane, lowObstaclePrefab);
+        // Добавляем монетки над или за преградой, чтобы направить игрока
+        Spawn((jumpLane + 1) % 3, coinPrefab);
+    }
 
+    private void SpawnShapePattern()
+    {
+        int targetLane = Random.Range(0, 3);
+
+        // Выбираем тип формы (0 - шар, 1 - куб)
+        bool isSphere = Random.value > 0.5f;
+        GameObject selectedGate;
+
+        if (isSphere)
+        {
+            selectedGate = sphereWalls[Random.Range(0, sphereWalls.Count)];
+        }
+        else
+        {
+            selectedGate = cubeWalls[Random.Range(0, cubeWalls.Count)];
+        }
+
+        Spawn(targetLane, selectedGate);
+
+        // Закрываем остальные пути "непробиваемыми" блоками из standardObstacles
         for (int i = 0; i < 3; i++)
         {
-            if (i == safeLane)
+            if (i != targetLane && standardObstacles.Count > 0)
             {
-                if (Random.value > 0.8f) Spawn(i, coinPrefab);
-            }
-            else if (Random.value < chance && standardObstacles.Count > 0)
-            {
-                Spawn(i, standardObstacles[Random.Range(0, standardObstacles.Count)]);
+                Spawn(i, standardObstacles[0]);
             }
         }
+    }
+
+    private void GenerateRest()
+    {
+        // Просто дорожка из монет
+        int lane = Random.Range(0, 3);
+        Spawn(lane, coinPrefab);
     }
 
     private void Spawn(int index, GameObject prefab)

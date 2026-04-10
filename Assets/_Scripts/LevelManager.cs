@@ -17,6 +17,12 @@ public class LevelManager : MonoBehaviour
     public bool isGameStarted = false;
     public float distanceTravelled;
 
+    [Header("Movement Settings")]
+    public float baseSpeed = 10f;
+    public float maxSpeed = 25f;
+    public float speedMultiplier = 0.05f; // Ќасколько сильно растет скорость от дистанции
+    public float currentSpeed;
+
     [Header("UI Panels")]
     public GameObject mainMenuPanel;
     public GameObject gameHUDPanel;
@@ -48,6 +54,8 @@ public class LevelManager : MonoBehaviour
         scoreText.text = ((int)distanceTravelled).ToString() + "m";
 
         UpdatePhaseLogic();
+
+        currentSpeed = Mathf.MoveTowards(currentSpeed, maxSpeed, speedMultiplier * Time.deltaTime);
 
         if (playerTransform.position.y < -5f) ShowGameOver();
     }
