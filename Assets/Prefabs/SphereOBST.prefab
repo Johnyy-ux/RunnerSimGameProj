@@ -9,7 +9,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2090822751616338956}
-  - component: {fileID: 6431294972429115354}
   - component: {fileID: 4637047167261179102}
   m_Layer: 0
   m_Name: ShapeChecker
@@ -33,19 +32,6 @@ Transform:
   m_Father: {fileID: 5475038136516490494}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &6431294972429115354
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2218206324064830913}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b0cbe690484f51f499116b346c9b5dcf, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  requiredTag: PlayerSphere
 --- !u!65 &4637047167261179102
 BoxCollider:
   m_ObjectHideFlags: 0

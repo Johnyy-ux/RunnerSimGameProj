@@ -1,139 +1,185 @@
-using System.Collections;
+ï»¿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 public class TileObstacle : MonoBehaviour
 {
-    [Header("Obstacle Prefabs")]
-    public List<GameObject> standardObstacles; // Îáû÷íûå áëîêè
-    public GameObject lowObstaclePrefab;      // Ïğåãğàäà äëÿ ïğûæêà
-    public List<GameObject> sphereWalls; // Ñşäà êèäàåøü âñå âàğèàöèè âîğîò äëÿ øàğà
-    public List<GameObject> cubeWalls;   // Ñşäà — äëÿ êóáà
+    [Header("Fallback Prefabs (if theme doesn't provide)")]
+    public List<GameObject> standardObstacles = new();
+    public List<GameObject> sphereWalls = new();
+    public List<GameObject> cubeWalls = new();
     public GameObject coinPrefab;
 
-    public Transform[] spawnPoints; // 3 òî÷êè ñïàâíà
+    [Header("Spawn Points (must have exactly 3)")]
+    public Transform[] spawnPoints = new Transform[3];
 
-    void Start()
+    private readonly List<GameObject> spawnedObjects = new List<GameObject>();
+    private TileManager tileManager;
+
+    // â”€â”€ Public â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    public void Initialize(TileManager manager, bool isRestTile)
     {
-        if (LevelManager.Instance == null) return;
+        tileManager = manager;
+        ClearSpawnedObjects();
 
-        Random.InitState((int)transform.position.z);
-
-        float z = transform.position.z;
-        GamePhase myPhase = DeterminePhase(z);
-
-        // Èíòåãğèğóåì "Îñòûâàíèå": êàæäàÿ 6-ÿ ïëèòêà — ôàçà îòäûõà
-        if ((int)(z / 10) % 6 == 0)
+        if (isRestTile)
         {
-            GenerateRest();
+            SpawnRestTile();
+            return;
         }
-        else
+
+        switch (GetCurrentPhase())
         {
-            GenerateByPhase(myPhase);
+            case GamePhase.Tutorial:
+            case GamePhase.Rest:
+                SpawnRestTile();
+                break;
+            case GamePhase.Standard:
+                SpawnStandard();
+                break;
+            case GamePhase.ShapeChallenge:
+                SpawnShapeGate();
+                break;
         }
     }
 
-    private GamePhase DeterminePhase(float z)
+    public void ClearSpawnedObjects()
     {
-        if (z < 100f) return GamePhase.Tutorial;
-        float cyclePos = (z - 100f) % 500f;
-        if (cyclePos < 200f) return GamePhase.Standard;
-        if (cyclePos < 400f) return GamePhase.ShapeChallenge;
+        foreach (var obj in spawnedObjects)
+            if (obj != null) Destroy(obj);
+
+        spawnedObjects.Clear();
+    }
+
+    // â”€â”€ Theme Prefabs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    private List<GameObject> GetStandardObstacles()
+    {
+        var theme = ThemeManager.Instance?.ActiveTheme;
+        return theme?.standardObstacles?.Count > 0 ? theme.standardObstacles : standardObstacles;
+    }
+
+    private List<GameObject> GetSphereWalls()
+    {
+        var theme = ThemeManager.Instance?.ActiveTheme;
+        return theme?.sphereWalls?.Count > 0 ? theme.sphereWalls : sphereWalls;
+    }
+
+    private List<GameObject> GetCubeWalls()
+    {
+        var theme = ThemeManager.Instance?.ActiveTheme;
+        return theme?.cubeWalls?.Count > 0 ? theme.cubeWalls : cubeWalls;
+    }
+
+    private GameObject GetCoinPrefab()
+    {
+        var theme = ThemeManager.Instance?.ActiveTheme;
+        return theme?.coinPrefab != null ? theme.coinPrefab : coinPrefab;
+    }
+
+    // â”€â”€ Phase Logic â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    private GamePhase GetCurrentPhase()
+    {
+        var lm = LevelManager.Instance;
+        if (lm == null || lm.distanceTravelled < 100f)
+            return GamePhase.Tutorial;
+
+        float cycle = (lm.distanceTravelled - 100f) % 500f;
+        if (cycle < 200f) return GamePhase.Standard;
+        if (cycle < 400f) return GamePhase.ShapeChallenge;
         return GamePhase.Rest;
     }
 
-    private void GenerateByPhase(GamePhase phase)
+    private float GetDifficulty() =>
+        LevelManager.Instance == null ? 0f : Mathf.Clamp01(LevelManager.Instance.distanceTravelled / 3000f);
+
+    // â”€â”€ Spawn Patterns â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    private void SpawnRestTile()
     {
-        switch (phase)
-        {
-            case GamePhase.Tutorial:
-                Spawn(1, coinPrefab);
-                break;
-
-            case GamePhase.Rest:
-                GenerateRest();
-                break;
-
-            case GamePhase.ShapeChallenge:
-                SpawnShapePattern();
-                break;
-
-            case GamePhase.Standard:
-                SpawnRandomPattern();
-                break;
-        }
+        SpawnCoinInRandomLane();
+        ReportAllLanesSafe();
     }
 
-    // --- ÏÀÒÒÅĞÍÛ ÃÅÍÅĞÀÖÈÈ ---
-
-    private void SpawnRandomPattern()
+    private void SpawnStandard()
     {
-        int rand = Random.Range(0, 3);
-        if (rand == 0) SpawnJumpPattern();
-        else SpawnStandardLayout();
-    }
-
-    private void SpawnStandardLayout()
-    {
-        int safeLane = Random.Range(0, 3);
-        float chance = Mathf.Clamp(0.4f + (transform.position.z / 5000f), 0.4f, 0.8f);
+        var obstacles = GetStandardObstacles();
+        int safeLane = ChooseSafeLane();
+        int maxObstacles = GetDifficulty() > 0.5f ? 2 : 1;
+        int placed = 0;
 
         for (int i = 0; i < 3; i++)
         {
-            if (i == safeLane) Spawn(i, coinPrefab);
-            else if (Random.value < chance) Spawn(i, standardObstacles[Random.Range(0, standardObstacles.Count)]);
-        }
-    }
-
-    private void SpawnJumpPattern()
-    {
-        int jumpLane = Random.Range(0, 3);
-        Spawn(jumpLane, lowObstaclePrefab);
-        // Äîáàâëÿåì ìîíåòêè íàä èëè çà ïğåãğàäîé, ÷òîáû íàïğàâèòü èãğîêà
-        Spawn((jumpLane + 1) % 3, coinPrefab);
-    }
-
-    private void SpawnShapePattern()
-    {
-        int targetLane = Random.Range(0, 3);
-
-        // Âûáèğàåì òèï ôîğìû (0 - øàğ, 1 - êóá)
-        bool isSphere = Random.value > 0.5f;
-        GameObject selectedGate;
-
-        if (isSphere)
-        {
-            selectedGate = sphereWalls[Random.Range(0, sphereWalls.Count)];
-        }
-        else
-        {
-            selectedGate = cubeWalls[Random.Range(0, cubeWalls.Count)];
-        }
-
-        Spawn(targetLane, selectedGate);
-
-        // Çàêğûâàåì îñòàëüíûå ïóòè "íåïğîáèâàåìûìè" áëîêàìè èç standardObstacles
-        for (int i = 0; i < 3; i++)
-        {
-            if (i != targetLane && standardObstacles.Count > 0)
+            if (i == safeLane)
             {
-                Spawn(i, standardObstacles[0]);
+                Spawn(i, GetCoinPrefab());
+                tileManager?.ReportSafeLane(i);
+            }
+            else if (placed < maxObstacles && obstacles.Count > 0)
+            {
+                Spawn(i, obstacles[Random.Range(0, obstacles.Count)]);
+                tileManager?.ReportObstacleInLane(i);
+                placed++;
+            }
+            else
+            {
+                tileManager?.ReportSafeLane(i);
             }
         }
     }
 
-    private void GenerateRest()
+    private void SpawnShapeGate()
     {
-        // Ïğîñòî äîğîæêà èç ìîíåò
-        int lane = Random.Range(0, 3);
-        Spawn(lane, coinPrefab);
+        bool useSphere = Random.value > 0.5f;
+        var gates = useSphere ? GetSphereWalls() : GetCubeWalls();
+
+        if (gates.Count == 0)
+        {
+            SpawnStandard();
+            return;
+        }
+
+        int gateLane = Random.Range(0, 3);
+        Spawn(gateLane, gates[Random.Range(0, gates.Count)]);
+        tileManager?.ReportSafeLane(gateLane);
+
+        var obstacles = GetStandardObstacles();
+        for (int i = 0; i < 3; i++)
+        {
+            if (i == gateLane || obstacles.Count == 0) continue;
+            Spawn(i, obstacles[Random.Range(0, obstacles.Count)]);
+            tileManager?.ReportObstacleInLane(i);
+        }
     }
 
-    private void Spawn(int index, GameObject prefab)
+    // â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    private void SpawnCoinInRandomLane()
     {
-        if (prefab != null && index < spawnPoints.Length)
-        {
-            Instantiate(prefab, spawnPoints[index].position, Quaternion.identity, transform);
-        }
+        int lane = Random.Range(0, 3);
+        Spawn(lane, GetCoinPrefab());
+        tileManager?.ReportSafeLane(lane);
+    }
+
+    private int ChooseSafeLane()
+    {
+        var forced = new List<int>();
+        for (int i = 0; i < 3; i++)
+            if (tileManager?.IsLaneForcedSafe(i) == true)
+                forced.Add(i);
+
+        return forced.Count > 0 ? forced[Random.Range(0, forced.Count)] : Random.Range(0, 3);
+    }
+
+    private void ReportAllLanesSafe()
+    {
+        for (int i = 0; i < 3; i++)
+            tileManager?.ReportSafeLane(i);
+    }
+
+    private void Spawn(int laneIndex, GameObject prefab)
+    {
+        if (prefab == null || laneIndex >= spawnPoints.Length || spawnPoints[laneIndex] == null)
+            return;
+
+        GameObject instance = Instantiate(prefab, spawnPoints[laneIndex].position, Quaternion.identity, transform);
+        spawnedObjects.Add(instance);
     }
 }

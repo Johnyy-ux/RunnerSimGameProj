@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 14d3433017ab41244a02d60634bb31dd, type: 3}
+  m_Name: Default
+  m_EditorClassIdentifier: 
+  themeName: Default
+  themePreviewIcon: {fileID: 0}
+  unlockCost: 0
+  isUnlockedByDefault: 1
+  skyboxMaterial: {fileID: 2100000, guid: b7c00be18a6e7a2428b01c61aea8c5b6, type: 2}
+  backgroundColor: {r: 0, g: 0, b: 0, a: 1}
+  roadMaterial: {fileID: 2100000, guid: dea4fb12ff0488146975fa1087d51fce, type: 2}
+  standardObstacles:
+  - {fileID: 604955060390432610, guid: d56362a9b2b7b3a4da1b958dac6d2f73, type: 3}
+  sphereWalls:
+  - {fileID: 2802177635500280559, guid: 56d7cbeb5dd00d24c844fb49b6bc30c2, type: 3}
+  - {fileID: 8627591827450892950, guid: da2c47d26a61ab1479f9f05cc6180ac3, type: 3}
+  cubeWalls:
+  - {fileID: 6264465867545240928, guid: 3c018aa1326a3ec478de9a82c5bb9e53, type: 3}
+  - {fileID: 9146633718176539772, guid: 0dc7f24a9344c8942ac0f47bd923575f, type: 3}
+  coinPrefab: {fileID: 1199727666660922734, guid: 6955db8903c8c4348a3f4fa80a32c6ce,
+    type: 3}

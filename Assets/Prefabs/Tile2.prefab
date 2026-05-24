@@ -9,7 +9,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 500334525332336092}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: ObstContainer
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -47,7 +47,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 500334526179501884}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: SpawnPoint_L
   m_TagString: Untagged
   m_Icon: {fileID: 7174288486110832750, guid: 0000000000000000d000000000000000, type: 0}
@@ -78,7 +78,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 500334527012636857}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: SpawnPoint_C
   m_TagString: Untagged
   m_Icon: {fileID: 8418204508859773708, guid: 0000000000000000d000000000000000, type: 0}
@@ -109,7 +109,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 500334527097710747}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: SpawnPoint_R
   m_TagString: Untagged
   m_Icon: {fileID: -5442936267250999957, guid: 0000000000000000d000000000000000, type: 0}
@@ -141,7 +141,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2048993154932670514}
   - component: {fileID: 2048993154932670478}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Tile2
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -178,9 +178,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   standardObstacles:
   - {fileID: 604955060390432610, guid: d56362a9b2b7b3a4da1b958dac6d2f73, type: 3}
-  shapeWalls:
-  - {fileID: 6264465867545240928, guid: 3c018aa1326a3ec478de9a82c5bb9e53, type: 3}
+  lowObstaclePrefab: {fileID: 8627591827450892950, guid: da2c47d26a61ab1479f9f05cc6180ac3,
+    type: 3}
+  sphereWalls:
   - {fileID: 2802177635500280559, guid: 56d7cbeb5dd00d24c844fb49b6bc30c2, type: 3}
+  cubeWalls:
+  - {fileID: 6264465867545240928, guid: 3c018aa1326a3ec478de9a82c5bb9e53, type: 3}
+  - {fileID: 9146633718176539772, guid: 0dc7f24a9344c8942ac0f47bd923575f, type: 3}
   coinPrefab: {fileID: 1199727666660922734, guid: 6955db8903c8c4348a3f4fa80a32c6ce,
     type: 3}
   spawnPoints:
@@ -203,7 +207,7 @@ GameObject:
   - component: {fileID: 2048993155234808723}
   - component: {fileID: 2048993155234808722}
   - component: {fileID: 2048993155234808721}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Road
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -299,7 +303,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5356326962387711524}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: SpawnPoint_S
   m_TagString: Untagged
   m_Icon: {fileID: 7174288486110832750, guid: 0000000000000000d000000000000000, type: 0}
@@ -330,7 +334,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2978653680839320588}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: SpawnPoint_R (1)
   m_TagString: Untagged
   m_Icon: {fileID: -5442936267250999957, guid: 0000000000000000d000000000000000, type: 0}
@@ -361,7 +365,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 624238600330769507}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: SpawnPoint_C (1)
   m_TagString: Untagged
   m_Icon: {fileID: 8418204508859773708, guid: 0000000000000000d000000000000000, type: 0}
@@ -392,7 +396,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 4721384383286775100}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: SpawnPoint_L (1)
   m_TagString: Untagged
   m_Icon: {fileID: 7174288486110832750, guid: 0000000000000000d000000000000000, type: 0}

@@ -1,81 +1,96 @@
-using System.Collections;
+п»їusing System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 public class InventoryManager : MonoBehaviour
 {
-    public static InventoryManager Instance;
-    public List<SkinItem> allSkins;
+    public static InventoryManager Instance { get; private set; }
+
+    [Header("All Skins")]
+    public List<SkinItem> allSkins = new();
 
     [Header("UI")]
     public GameObject skinButtonPrefab;
     public Transform container;
 
-    void Awake() => Instance = this;
-
-    void Start() => SpawnButtons();
-
-    public void SpawnButtons()
+    private void Awake()
     {
-        foreach (Transform child in container) Destroy(child.gameObject);
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+        Instance = this;
+    }
+
+    private void Start() => SpawnAllSkinButtons();
+
+    // в”Ђв”Ђ UI Generation в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+    public void SpawnAllSkinButtons()
+    {
+        // Clear old buttons
+        foreach (Transform child in container)
+            Destroy(child.gameObject);
 
         foreach (var skin in allSkins)
         {
-            GameObject go = Instantiate(skinButtonPrefab, container);
-            go.GetComponent<SkinButtonUI>().SetUpButton(skin);
+            if (skin == null) continue;
+            GameObject button = Instantiate(skinButtonPrefab, container);
+            var ui = button.GetComponent<SkinButtonUI>();
+            if (ui != null) ui.SetUpButton(skin);
         }
     }
 
+    // в”Ђв”Ђ Skin Logic в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
     public bool IsSkinUnlocked(SkinItem skin)
     {
-        // Первый скин всегда открыт
-        if (allSkins.IndexOf(skin) == 0) return true;
+        if (skin == null) return false;
+        if (allSkins.Count > 0 && allSkins[0] == skin) return true; // РџРµСЂРІС‹Р№ СЃРєРёРЅ РІСЃРµРіРґР° Р±РµСЃРїР»Р°С‚РЅС‹Р№
         return PlayerPrefs.GetInt("Skin_" + skin.name, 0) == 1;
     }
 
     public bool TryBuySkin(SkinItem skin)
     {
+        if (skin == null || IsSkinUnlocked(skin)) return false;
+
         int currentCoins = PlayerPrefs.GetInt("TotalCoins", 0);
+        if (currentCoins < skin.price) return false;
 
-        if (currentCoins >= skin.price && !IsSkinUnlocked(skin))
-        {
-            currentCoins -= skin.price;
-            PlayerPrefs.SetInt("TotalCoins", currentCoins);
-            PlayerPrefs.SetInt("Skin_" + skin.name, 1);
-            PlayerPrefs.Save();
+        // Purchase
+        PlayerPrefs.SetInt("TotalCoins", currentCoins - skin.price);
+        PlayerPrefs.SetInt("Skin_" + skin.name, 1);
+        PlayerPrefs.Save();
 
-            LevelManager.Instance.UpdateCoinDisplay();
-            return true;
-        }
-        return false;
-    }
-
-    public Material GetSavedSkinMaterial()
-    {
-        // Достаем индекс выбранного скина (по умолчанию 0)
-        int selectedIndex = PlayerPrefs.GetInt("SelectedSkinIndex", 0);
-
-        // Проверяем, что индекс в пределах списка и список не пуст
-        if (allSkins != null && allSkins.Count > 0)
-        {
-            if (selectedIndex >= 0 && selectedIndex < allSkins.Count)
-            {
-                return allSkins[selectedIndex].skinMaterial;
-            }
-            return allSkins[0].skinMaterial; // Если индекс кривой, даем первый скин
-        }
-
-        Debug.LogError("Список allSkins пуст в InventoryManager!");
-        return null;
+        LevelManager.Instance?.UpdateCoinDisplay(showTotal: true);
+        return true;
     }
 
     public void SelectSkin(SkinItem skin)
     {
+        if (skin == null) return;
+
         int index = allSkins.IndexOf(skin);
+        if (index < 0) return;
+
         PlayerPrefs.SetInt("SelectedSkinIndex", index);
         PlayerPrefs.Save();
 
-        PlayerController player = FindFirstObjectByType<PlayerController>();
-        if (player != null) player.ApplySkin(skin.skinMaterial);
+        // РћР±РЅРѕРІР»СЏРµРј СЃРєРёРЅ РЅР° РёРіСЂРѕРєРµ (РЅРѕРІР°СЏ СЃРёСЃС‚РµРјР°)
+        var shapeController = FindFirstObjectByType<PlayerShapeController>();
+        shapeController?.ApplySkin(skin.skinMaterial);
+    }
+
+    public Material GetSavedSkinMaterial()
+    {
+        if (allSkins == null || allSkins.Count == 0)
+        {
+            Debug.LogError("InventoryManager: allSkins list is empty!");
+            return null;
+        }
+
+        int index = PlayerPrefs.GetInt("SelectedSkinIndex", 0);
+        index = Mathf.Clamp(index, 0, allSkins.Count - 1);
+
+        return allSkins[index].skinMaterial;
     }
 }

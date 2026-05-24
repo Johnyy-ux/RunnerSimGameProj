@@ -4,51 +4,61 @@ using UnityEngine;
 using UnityEngine.Audio;
 public class AudioManager : MonoBehaviour
 {
-    public static AudioManager Instance;
+    public static AudioManager Instance { get; private set; }
 
-    [Header("Mixer & Groups")]
+    [Header("Audio Mixer")]
     public AudioMixer mainMixer;
 
-    [Header("Sources")]
+    [Header("Audio Sources")]
     public AudioSource musicSource;
     public AudioSource sfxSource;
 
-    [Header("Clips")]
+    [Header("Audio Clips")]
     public AudioClip coinSound;
+    public AudioClip jumpSound;
     public AudioClip buttonClick;
     public AudioClip gameMusic;
 
     private void Awake()
     {
-        if (Instance == null)
+        if (Instance != null && Instance != this)
         {
-            Instance = this;
-            DontDestroyOnLoad(gameObject); // Звук не прерывается при смене сцен
+            Destroy(gameObject);
+            return;
         }
-        else Destroy(gameObject);
+
+        Instance = this;
+        DontDestroyOnLoad(gameObject);
     }
 
     private void Start()
     {
-        musicSource.clip = gameMusic;
-        musicSource.Play();
-        SetMenuMode(true); // Начинаем в режиме меню
+        if (musicSource && gameMusic)
+        {
+            musicSource.clip = gameMusic;
+            musicSource.Play();
+        }
+
+        SetMenuMode(true);
     }
 
-    // Тот самый переход: приглушение музыки
+    /// <summary>
+    /// Muffles music in menu, full range in game
+    /// </summary>
     public void SetMenuMode(bool isMenu)
     {
-        // 22000 Гц - звук чистый, 800 Гц - звук приглушенный
+        if (mainMixer == null) return;
         float freq = isMenu ? 800f : 22000f;
         mainMixer.SetFloat("MusicLowPass", freq);
     }
 
     public void PlaySFX(AudioClip clip)
     {
-        if (clip != null)
-        {
-          sfxSource.PlayOneShot(clip);
-        }
-        
+        if (clip != null && sfxSource != null)
+            sfxSource.PlayOneShot(clip);
     }
+
+    public void PlayJumpSound() => PlaySFX(jumpSound);
+    public void PlayButtonClick() => PlaySFX(buttonClick);
+
 }

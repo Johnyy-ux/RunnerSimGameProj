@@ -1,4 +1,4 @@
-using System.Collections;
+ï»¿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine.SceneManagement;
 using UnityEngine;
@@ -7,23 +7,16 @@ public enum GamePhase { Tutorial, Standard, ShapeChallenge, Rest }
 
 public class LevelManager : MonoBehaviour
 {
-    public static LevelManager Instance;
-
-    [Header("Phase Settings")]
-    public GamePhase currentPhase = GamePhase.Tutorial;
-    public float phaseDistance = 200f; // Äëèíà êàæäîé ôàçû â ìåòðàõ
+    public static LevelManager Instance { get; private set; }
 
     [Header("Status")]
     public bool isGameStarted = false;
     public float distanceTravelled;
 
-    [Header("Movement Settings")]
-    public float baseSpeed = 10f;
-    public float maxSpeed = 25f;
-    public float speedMultiplier = 0.05f; // Íàñêîëüêî ñèëüíî ðàñòåò ñêîðîñòü îò äèñòàíöèè
-    public float currentSpeed;
+    [Header("Phases")]
+    public GamePhase currentPhase = GamePhase.Tutorial;
 
-    [Header("UI Panels")]
+    [Header("UI")]
     public GameObject mainMenuPanel;
     public GameObject gameHUDPanel;
     public GameObject loseUI;
@@ -31,64 +24,71 @@ public class LevelManager : MonoBehaviour
     [Header("UI Text")]
     public TextMeshProUGUI scoreText;
     public TextMeshProUGUI coinText;
-    public TextMeshProUGUI phaseText; // ×òîáû èãðîê âèäåë, ÷òî ðåæèì ñìåíèëñÿ
+    public TextMeshProUGUI phaseText;
 
     public Transform playerTransform;
+
     private int sessionCoins = 0;
 
-    void Awake() => Instance = this;
-
-    void Start()
+    private void Awake()
     {
-        Time.timeScale = 1f;
-        UpdateCoinDisplay();
-        mainMenuPanel.SetActive(true);
-        gameHUDPanel.SetActive(false);
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+        Instance = this;
     }
 
-    void Update()
+    private void Start()
+    {
+        Time.timeScale = 1f;
+        mainMenuPanel.SetActive(true);
+        gameHUDPanel.SetActive(false);
+        UpdateCoinDisplay(false);
+    }
+
+    private void Update()
     {
         if (!isGameStarted || playerTransform == null) return;
 
         distanceTravelled = playerTransform.position.z;
-        scoreText.text = ((int)distanceTravelled).ToString() + "m";
+        scoreText.text = $"{Mathf.FloorToInt(distanceTravelled)}m";
 
-        UpdatePhaseLogic();
+        UpdatePhase();
 
-        currentSpeed = Mathf.MoveTowards(currentSpeed, maxSpeed, speedMultiplier * Time.deltaTime);
-
-        if (playerTransform.position.y < -5f) ShowGameOver();
+        if (playerTransform.position.y < -5f)
+            ShowGameOver();
     }
 
-    // ÏÐÎÄÂÈÍÓÒÀß ËÎÃÈÊÀ ÔÀÇ
-    private void UpdatePhaseLogic()
+    // â”€â”€ Phase System â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    private void UpdatePhase()
+    {
+        GamePhase newPhase = CalculateCurrentPhase();
+
+        if (newPhase != currentPhase)
+            SetPhase(newPhase);
+    }
+
+    private GamePhase CalculateCurrentPhase()
     {
         if (distanceTravelled < 100f)
-        {
-            currentPhase = GamePhase.Tutorial;
-        }
-        else
-        {
-            // Áåðåì îñòàòîê îò äåëåíèÿ âñåé äèñòàíöèè íà îáùóþ äëèíó öèêëà ôàç
-            // Íàïðèìåð, öèêë: Standard(200) + Shape(200) + Rest(100) = 500ì.
-            float cyclePos = (distanceTravelled - 100f) % 500f;
+            return GamePhase.Tutorial;
 
-            if (cyclePos < 200f) SetPhase(GamePhase.Standard);
-            else if (cyclePos < 400f) SetPhase(GamePhase.ShapeChallenge);
-            else SetPhase(GamePhase.Rest);
-        }
+        float cycle = (distanceTravelled - 100f) % 500f;
+
+        if (cycle < 200f) return GamePhase.Standard;
+        if (cycle < 400f) return GamePhase.ShapeChallenge;
+        return GamePhase.Rest;
     }
 
     private void SetPhase(GamePhase newPhase)
     {
-        if (currentPhase == newPhase) return;
         currentPhase = newPhase;
-
-        // Âèçóàëüíîå îïîâåùåíèå î ñìåíå ôàçû (ïî æåëàíèþ)
-        if (phaseText) phaseText.text = currentPhase.ToString();
-        Debug.Log("Ñìåíà ôàçû íà: " + currentPhase);
+        if (phaseText) phaseText.text = newPhase.ToString();
     }
 
+    // â”€â”€ Game Flow â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     public void StartGame()
     {
         isGameStarted = true;
@@ -96,43 +96,49 @@ public class LevelManager : MonoBehaviour
         gameHUDPanel.SetActive(true);
     }
 
-    public void GoToMenu()
-    {
-        // Åñëè ìû â ïðîèãðûøå, ñîõðàíÿåì äàííûå è èäåì â ìåíþ
-        if (isGameStarted) SaveData();
-
-        // Ïåðåçàãðóçêà ñöåíû âåðíåò íàñ â Start(), ãäå âêëþ÷èòñÿ ïàíåëü ìåíþ
-        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
-    }
-
     public void ShowGameOver()
     {
         isGameStarted = false;
-        SaveData();
+        SaveProgress();
         if (loseUI) loseUI.SetActive(true);
     }
 
-    private void SaveData()
+    public void GoToMenu()
     {
-        int total = PlayerPrefs.GetInt("TotalCoins", 0);
-        PlayerPrefs.SetInt("TotalCoins", total + sessionCoins);
-
-        float high = PlayerPrefs.GetFloat("HighScore", 0);
-        if (distanceTravelled > high) PlayerPrefs.SetFloat("HighScore", distanceTravelled);
-
-        PlayerPrefs.Save();
+        if (isGameStarted) SaveProgress();
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
+
+    public void Restart() => SceneManager.LoadScene(0);
 
     public void AddCoin()
     {
         sessionCoins++;
-        coinText.text = sessionCoins.ToString();
+        if (coinText) coinText.text = sessionCoins.ToString();
     }
 
-    public void UpdateCoinDisplay()
+    // â”€â”€ Save & Display â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    private void SaveProgress()
     {
-        // Îáùèé áàëàíñ ìîíåò
+        // Total coins
+        int total = PlayerPrefs.GetInt("TotalCoins", 0);
+        PlayerPrefs.SetInt("TotalCoins", total + sessionCoins);
+
+        // High score
+        float highScore = PlayerPrefs.GetFloat("HighScore", 0f);
+        if (distanceTravelled > highScore)
+            PlayerPrefs.SetFloat("HighScore", distanceTravelled);
+
+        PlayerPrefs.Save();
     }
 
-    public void Restart() => UnityEngine.SceneManagement.SceneManager.LoadScene(0);
+    public void UpdateCoinDisplay(bool showTotal = false)
+    {
+        if (!coinText) return;
+
+        if (showTotal)
+            coinText.text = PlayerPrefs.GetInt("TotalCoins", 0).ToString();
+        else
+            coinText.text = sessionCoins.ToString();
+    }
 }

@@ -4,22 +4,21 @@ using UnityEngine;
 
 public class BreakableWall : MonoBehaviour
 {
-    private Rigidbody[] bricks;
-    private bool isShattered = false;
-
-    [Header("Настройки разрушения")]
+    [Header("Destruction Settings")]
     public float explosionForce = 500f;
     public float explosionRadius = 5f;
     public GameObject explosionParticles;
 
-    void Start()
+    private Rigidbody[] bricks;
+    private bool isShattered = false;
+
+    private void Awake()
     {
         bricks = GetComponentsInChildren<Rigidbody>();
-
         foreach (var rb in bricks)
         {
-            rb.isKinematic = true; // Замораживаем до удара
-            rb.interpolation = RigidbodyInterpolation.Interpolate; // Для плавности обломков
+            rb.isKinematic = true;
+            rb.interpolation = RigidbodyInterpolation.Interpolate;
         }
     }
 
@@ -29,16 +28,12 @@ public class BreakableWall : MonoBehaviour
         isShattered = true;
 
         if (explosionParticles != null)
-        {
             Instantiate(explosionParticles, hitPoint, Quaternion.identity);
-        }
 
         foreach (var rb in bricks)
         {
             rb.isKinematic = false;
             rb.AddExplosionForce(explosionForce, hitPoint, explosionRadius);
-
-            // Плавное удаление кирпичей через 3 секунды
             Destroy(rb.gameObject, 3f);
         }
 

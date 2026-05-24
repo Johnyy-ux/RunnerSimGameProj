@@ -4,6 +4,6 @@ using UnityEngine;
 
 public class ShapeWall : MonoBehaviour
 {
-    // ¬ инспекторе выбери, кака€ форма нужна дл€ этой стены
+    [Header("Required Shape to Pass")]
     public PlayerShape requiredShape;
 }

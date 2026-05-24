@@ -1,4 +1,4 @@
-using System.Collections;
+п»їusing System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -14,17 +14,18 @@ public class SkinButtonUI : MonoBehaviour
     [Header("Lock Animation")]
     public GameObject closedLock;
     public GameObject openLock;
-    public RectTransform lockContainer; // Объект, в котором лежат оба замка
+    public RectTransform lockContainer;
 
-    private CanvasGroup lockGroup;
+    private CanvasGroup lockCanvasGroup;
 
     public void SetUpButton(SkinItem newSkin)
     {
         skin = newSkin;
-        if (lockGroup == null) lockGroup = lockContainer.gameObject.GetComponent<CanvasGroup>();
-        if (lockGroup == null) lockGroup = lockContainer.gameObject.AddComponent<CanvasGroup>();
+        lockCanvasGroup = lockContainer.GetComponent<CanvasGroup>()
+                       ?? lockContainer.gameObject.AddComponent<CanvasGroup>();
 
         UpdateVisual();
+
         buyButton.onClick.RemoveAllListeners();
         buyButton.onClick.AddListener(OnButtonClick);
     }
@@ -35,71 +36,82 @@ public class SkinButtonUI : MonoBehaviour
 
         if (isUnlocked)
         {
-            priceText.text = "ВЫБРАТЬ";
+            priceText.text = "SELECT";
             priceText.color = Color.green;
             closedLock.SetActive(false);
             openLock.SetActive(false);
+            lockCanvasGroup.alpha = 0f;
         }
         else
         {
-            priceText.text = skin.price.ToString() + " $";
+            priceText.text = $"{skin.price}";
             priceText.color = Color.white;
             closedLock.SetActive(true);
             openLock.SetActive(false);
+            lockCanvasGroup.alpha = 1f;
             lockContainer.localScale = Vector3.one;
             lockContainer.anchoredPosition = Vector2.zero;
-            lockGroup.alpha = 1;
         }
     }
 
-    void OnButtonClick()
+    private void OnButtonClick()
     {
         if (InventoryManager.Instance.IsSkinUnlocked(skin))
         {
             InventoryManager.Instance.SelectSkin(skin);
         }
-        else
+        else if (InventoryManager.Instance.TryBuySkin(skin))
         {
-            if (InventoryManager.Instance.TryBuySkin(skin))
-            {
-                StartCoroutine(UnlockSequence());
-            }
+            StartCoroutine(UnlockSequence());
         }
     }
 
-    IEnumerator UnlockSequence()
+    private IEnumerator UnlockSequence()
     {
         buyButton.interactable = false;
 
-        // 1. Увеличение
-        float t = 0;
-        while (t < 1f)
-        {
-            t += Time.deltaTime * 10f;
-            lockContainer.localScale = Vector3.Lerp(Vector3.one, Vector3.one * 1.3f, t);
-            yield return null;
-        }
+        // Scale up animation
+        yield return AnimateScale(lockContainer, 1f, 1.3f, 0.15f);
 
-        // 2. Подмена
+        // Swap lock icons
         closedLock.SetActive(false);
         openLock.SetActive(true);
         yield return new WaitForSeconds(0.15f);
 
-        // 3. Падение и затухание
-        t = 0;
+        // Fall + fade out
+        yield return AnimateFallAndFade();
+
+        UpdateVisual();
+        buyButton.interactable = true;
+    }
+
+    private IEnumerator AnimateScale(RectTransform rect, float startScale, float endScale, float duration)
+    {
+        float t = 0f;
+        Vector3 start = Vector3.one * startScale;
+        Vector3 end = Vector3.one * endScale;
+
+        while (t < 1f)
+        {
+            t += Time.deltaTime / duration;
+            rect.localScale = Vector3.Lerp(start, end, t);
+            yield return null;
+        }
+    }
+
+    private IEnumerator AnimateFallAndFade()
+    {
+        float t = 0f;
         Vector2 startPos = lockContainer.anchoredPosition;
-        Vector2 targetPos = startPos + new Vector2(0, -120f); // Падает вниз на 120 единиц
+        Vector2 targetPos = startPos + new Vector2(0, -120f);
 
         while (t < 1f)
         {
             t += Time.deltaTime * 3f;
             lockContainer.anchoredPosition = Vector2.Lerp(startPos, targetPos, t);
-            lockGroup.alpha = 1f - t;
+            lockCanvasGroup.alpha = 1f - t;
             yield return null;
         }
-
-        UpdateVisual();
-        buyButton.interactable = true;
     }
 }
 
